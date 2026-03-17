@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Vector 3D PRO</title>
+
+<style>
+:root {
+  --primary: #2563eb;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg);
+  margin: 0;
+}
+
+/* HEADER */
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+}
+
+/* LAYOUT */
+.container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.left { width: 65%; }
+.right { width: 35%; }
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+h3 {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+/* INPUTS */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+}
+
+/* BUTTONS */
+button {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  margin-top: 8px;
+  width: 100%;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-primary { background: var(--primary); color:white; }
+.btn-success { background: var(--success); color:white; }
+.btn-danger { background: #64748b; color:white; }
+
+/* LISTA */
+.item {
+  background: #e2e8f0;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 8px;
+  display:flex;
+  justify-content: space-between;
+}
+
+.total {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--primary);
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <div>🔷 Vector 3D</div>
+  <div>Soluciones de Impresión 3D</div>
+</div>
+
+<div class="container">
+
+<div class="left">
+
+<div class="card">
+<h3>Información del Cliente</h3>
+<input id="cliente" placeholder="Nombre del cliente">
+<input id="fecha" disabled>
+<input id="orden" disabled>
+</div>
+
+<div class="card">
+<h3>Configuración de Costos</h3>
+<input id="precioKg" value="350" placeholder="Material/kg">
+<input id="costoHora" value="5" placeholder="Costo/hora">
+<input id="ganancia" value="30" placeholder="Ganancia %">
+<input id="margen" value="5" placeholder="Margen fallas %">
+</div>
+
+<div class="card">
+<h3>Agregar Pieza</h3>
+<input id="pieza" placeholder="Nombre de pieza">
+<input id="peso" type="number" placeholder="Gramos">
+<input id="tiempo" type="number" placeholder="Horas">
+<input id="cantidad" type="number" value="1">
+<button class="btn-primary" onclick="agregar()">+ Agregar Pieza</button>
+</div>
+
+</div>
+
+<div class="right">
+
+<div class="card">
+<h3>Piezas</h3>
+<div id="lista"></div>
+</div>
+
+<div class="card">
+<h3>Resumen</h3>
+<div id="resumen"></div>
+<div class="total" id="total"></div>
+</div>
+
+<div class="card">
+<button class="btn-success" onclick="guardar()">💾 Guardar</button>
+<button class="btn-danger" onclick="limpiar()">🧹 Limpiar</button>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycby2T08HOlAwIo6pzvTom0pXweQvu25Q6mjSgw11eWgFcvNkNHDeHiKug6HJ6nCaNV2j/exec";
+
+let piezas = [];
+
+// AUTO FECHA Y ORDEN
+document.getElementById("fecha").value = new Date().toLocaleDateString();
+document.getElementById("orden").value = "QUOTE-" + Date.now();
+
+// AGREGAR PIEZA
+function agregar(){
+
+let pieza = document.getElementById("pieza").value;
+let peso = Number(document.getElementById("peso").value);
+let tiempo = Number(document.getElementById("tiempo").value);
+let cantidad = Number(document.getElementById("cantidad").value);
+
+if(!pieza || !peso || !tiempo) return alert("Completa datos");
+
+piezas.push({pieza, peso, tiempo, cantidad});
+render();
+}
+
+// RENDER
+function render(){
+
+let lista = document.getElementById("lista");
+lista.innerHTML = "";
+
+piezas.forEach((p,i) => {
+  lista.innerHTML += `
+  <div class="item">
+    ${p.pieza} x${p.cantidad}
+    <span onclick="eliminar(${i})" style="cursor:pointer;color:red;">❌</span>
+  </div>`;
+});
+
+calcular();
+}
+
+// ELIMINAR
+function eliminar(i){
+piezas.splice(i,1);
+render();
+}
+
+// CALCULO
+function calcular(){
+
+let precioKg = Number(precioKg.value);
+let costoHora = Number(costoHora.value);
+let ganancia = Number(ganancia.value);
+let margen = Number(margen.value);
+
+let material = 0;
+let impresion = 0;
+
+piezas.forEach(p => {
+  material += (p.peso/1000)*precioKg*p.cantidad;
+  impresion += p.tiempo*costoHora*p.cantidad;
+});
+
+let subtotal = material + impresion;
+let margenFallas = subtotal*(margen/100);
+let base = subtotal + margenFallas;
+let gananciaTotal = base*(ganancia/100);
+let total = base + gananciaTotal;
+
+document.getElementById("resumen").innerHTML = `
+Material: $${material.toFixed(2)}<br>
+Impresión: $${impresion.toFixed(2)}<br>
+Subtotal: $${subtotal.toFixed(2)}<br>
+Margen: $${margenFallas.toFixed(2)}<br>
+Ganancia: $${gananciaTotal.toFixed(2)}
+`;
+
+document.getElementById("total").innerText = "TOTAL: $" + total.toFixed(2);
+
+window.totalFinal = total;
+
+}
+
+// GUARDAR
+function guardar(){
+
+let cliente = document.getElementById("cliente").value;
+
+if(!cliente) return alert("Falta cliente");
+
+fetch(API_URL, {
+  method:"POST",
+  body: JSON.stringify({
+    tipo:"cotizacion",
+    orden: document.getElementById("orden").value,
+    cliente: cliente,
+    fecha: new Date().toISOString(),
+    piezas: piezas.map(p => ({
+      n: p.pieza,
+      c: p.cantidad,
+      total: window.totalFinal
+    }))
+  })
+})
+.then(()=> alert("Guardado"))
+.catch(()=> alert("Error"));
+
+}
+
+// LIMPIAR
+function limpiar(){
+piezas = [];
+render();
+}
+
+</script>
+
+</body>
+</html>
